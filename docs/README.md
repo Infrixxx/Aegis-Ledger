@@ -1,9 +1,9 @@
 
 ---
 
-# [App Name] — Behavioral Execution Firewall & Telemetry Journal
+# Aegis Ledger — Behavioral Execution Firewall & Telemetry Journal
 
-**[App Name]** is an active behavioral enforcement system designed to eliminate emotional trading drift, revenge trading, and execution non-compliance.
+**Aegis Ledger** is an active behavioral enforcement system designed to eliminate emotional trading drift, revenge trading, and execution non-compliance.
 
 Unlike traditional spreadsheets that serve merely as passive, post-facto logging ledgers with high manual entry friction, this application operates as an event-driven **Finite State Machine (FSM)**. It decouples execution compliance from monetary PnL—conditioning traders to optimize for repeatable process adherence rather than short-term financial outcomes.
 
