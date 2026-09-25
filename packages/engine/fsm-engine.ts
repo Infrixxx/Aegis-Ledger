@@ -27,6 +27,19 @@ export interface SetupDraftInput {
   risk: RiskValidation;
 }
 
+async function streamToKafka(eventType: string, payload: any) {
+  try {
+    await fetch("http://localhost:8000/api/v1/telemetry/trade-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_type: eventType,
+        ...payload
+      }),
+    });
+  } catch (err) {}
+}
+
 export class FsmEngine {
   public static async getState(): Promise<SystemStateRecord> {
     const records = await db
@@ -192,6 +205,20 @@ export class FsmEngine {
       });
     });
 
+    await streamToKafka("POSITION_OPENED", {
+      broker_time_msc: payload.broker_time_msc,
+      account_number: payload.account_number,
+      ticket: payload.ticket,
+      symbol: payload.symbol,
+      order_type: payload.order_type,
+      volume: payload.volume,
+      price_open: payload.price_open,
+      price_sl: payload.price_sl,
+      price_tp: payload.price_tp,
+      balance: payload.balance,
+      equity: payload.equity
+    });
+
     return await FsmEngine.executeTransition("IN_PROGRESS", "POSITION_OPENED", {
       activeTicket: payload.ticket,
     });
@@ -214,6 +241,20 @@ export class FsmEngine {
         closeTimestampUtc: nowUtc,
       })
       .where(eq(tradesTable.ticket, payload.ticket));
+
+    await streamToKafka("POSITION_CLOSED", {
+      broker_time_msc: payload.broker_time_msc,
+      account_number: payload.account_number,
+      ticket: payload.ticket,
+      symbol: payload.symbol,
+      price_close: payload.price_close,
+      realized_profit: payload.realized_profit,
+      commission: payload.commission,
+      swap: payload.swap,
+      net_profit: payload.net_profit,
+      balance: payload.balance,
+      equity: payload.equity
+    });
 
     return await FsmEngine.executeTransition("POST_MORTEM", "POSITION_CLOSED", {});
   }

@@ -1,47 +1,113 @@
-import time
-import requests
-import psutil
+import json
 import logging
+import os
+import sys
+from contextlib import asynccontextmanager
+from typing import Any, Dict
 
-# Configure logging
+from confluent_kafka import KafkaError, Producer
+from fastapi import BackgroundTasks, FastAPI, status
+from pydantic import BaseModel, Field
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
+logger = logging.getLogger("GuardianProducer")
 
-API_URL = "http://localhost:3000/api/telemetry/circuit-status"
-POLL_INTERVAL_SECONDS = 5
-TARGET_PROCESS_NAME = "terminal64.exe"
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+TOPIC_TICKS = "telemetry.mt5.ticks"
+TOPIC_EVENTS = "telemetry.fsm.events"
 
-def kill_terminal():
-    killed = False
-    for proc in psutil.process_iter(['pid', 'name']):
-        try:
-            if proc.info['name'] and TARGET_PROCESS_NAME in proc.info['name'].lower():
-                proc.kill()
-                logging.warning(f"CIRCUIT BREAKER ACTIVE: Terminated {TARGET_PROCESS_NAME} (PID: {proc.info['pid']})")
-                killed = True
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            pass
-    return killed
+producer_conf = {
+    "bootstrap.servers": KAFKA_BOOTSTRAP_SERVERS,
+    "enable.idempotence": True,
+    "acks": "all",
+    "retries": 5,
+    "max.in.flight.requests.per.connection": 5,
+    "compression.type": "snappy",
+    "linger.ms": 10,
+    "batch.num.messages": 1000,
+}
 
-def poll_status():
-    while True:
-        try:
-            response = requests.get(API_URL, timeout=3)
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("circuit_breaker_active") is True:
-                    kill_terminal()
-            else:
-                logging.error(f"API Error: HTTP {response.status_code}")
-        except requests.exceptions.RequestException as e:
-            logging.debug(f"Connection failed (is the Next.js server running?): {e}")
-        
-        time.sleep(POLL_INTERVAL_SECONDS)
+producer: Producer = None
+
+def get_producer() -> Producer:
+    global producer
+    if producer is None:
+        producer = Producer(producer_conf)
+    return producer
+
+def delivery_report(err: KafkaError, msg: Any):
+    if err is not None:
+        logger.error(f"Kafka message delivery failed: {err}")
+    else:
+        logger.debug(f"Event delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
+
+class TickPayload(BaseModel):
+    symbol: str
+    broker_time_msc: int
+    bid: float
+    ask: float
+    last: float = 0.0
+    volume: float = 0.0
+
+class TradeEventPayload(BaseModel):
+    event_type: str = Field(..., regex="^(POSITION_OPENED|POSITION_CLOSED|CIRCUIT_BREAKER_TRIGGERED)$")
+    broker_time_msc: int
+    account_number: int
+    ticket: int
+    symbol: str
+    order_type: str = "BUY"
+    volume: float
+    price_open: float = 0.0
+    price_close: float = 0.0
+    price_sl: float = 0.0
+    price_tp: float = 0.0
+    net_profit: float = 0.0
+    balance: float
+    equity: float
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global producer
+    producer = get_producer()
+    yield
+    producer.flush(timeout=5)
+
+app = FastAPI(title="Aegis Telemetry Ingestion Bridge", lifespan=lifespan)
+
+def publish_to_broker(topic: str, key: str, payload: Dict[str, Any]):
+    p = get_producer()
+    try:
+        p.produce(
+            topic=topic,
+            key=key.encode("utf-8"),
+            value=json.dumps(payload).encode("utf-8"),
+            on_delivery=delivery_report,
+        )
+        p.poll(0)
+    except BufferError:
+        p.poll(1.0)
+        p.produce(
+            topic=topic,
+            key=key.encode("utf-8"),
+            value=json.dumps(payload).encode("utf-8"),
+            on_delivery=delivery_report,
+        )
+
+@app.post("/api/v1/telemetry/tick", status_code=status.HTTP_202_ACCEPTED)
+async def ingest_tick(tick: TickPayload, bg_tasks: BackgroundTasks):
+    bg_tasks.add_task(publish_to_broker, TOPIC_TICKS, tick.symbol, tick.model_dump())
+    return {"status": "ENQUEUED"}
+
+@app.post("/api/v1/telemetry/trade-event", status_code=status.HTTP_202_ACCEPTED)
+async def ingest_trade_event(event: TradeEventPayload, bg_tasks: BackgroundTasks):
+    routing_key = f"{event.account_number}_{event.ticket}"
+    bg_tasks.add_task(publish_to_broker, TOPIC_EVENTS, routing_key, event.model_dump())
+    return {"status": "ENQUEUED", "ticket": event.ticket}
 
 if __name__ == "__main__":
-    logging.info("Aegis Ledger Containment Daemon started.")
-    logging.info(f"Polling {API_URL} every {POLL_INTERVAL_SECONDS} seconds...")
-    poll_status()
+    import uvicorn
+    uvicorn.run("guardian_daemon:app", host="0.0.0.0", port=8000, reload=False, workers=2)
