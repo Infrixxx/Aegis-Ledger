@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { FsmEngine } from "@aegis/engine";
+import { db, systemStateTable } from "@aegis/db";
+import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +31,19 @@ export async function POST(req: Request) {
     
     if (body.action === "FINALIZE") {
       const res = await FsmEngine.finalizeTrade(body.payload);
+      return NextResponse.json(res);
+    }
+
+    if (body.action === "RESET_LOCKOUT") {
+      const nowUtc = new Date().toISOString();
+      await db.update(systemStateTable).set({
+        currentState: "IDLE",
+        activeSetupId: null,
+        activeTicket: null,
+        lockoutReleaseUtc: null,
+        updatedAt: nowUtc,
+      }).where(eq(systemStateTable.id, 1));
+      const res = await FsmEngine.getState();
       return NextResponse.json(res);
     }
 

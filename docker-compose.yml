@@ -37,7 +37,7 @@ services:
       - kafka
 
   minio:
-    image: docker.io/minio/minio:RELEASE.2024-03-30T09-41-56Z
+    image: cgr.dev/chainguard/minio:latest
     container_name: aegis_minio_lake
     ports:
       - "9000:9000"
@@ -54,7 +54,7 @@ services:
     container_name: aegis_clickhouse_dw
     ports:
       - "8123:8123"
-      - "9000:9000"
+      - "9004:9000"
     ulimits:
       nofile:
         soft: 262144

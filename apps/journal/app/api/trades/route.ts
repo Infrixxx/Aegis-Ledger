@@ -16,6 +16,7 @@ export async function GET() {
           price_close AS priceClose,
           price_sl AS slPrice,
           price_tp AS tpPrice,
+          formatDateTime(event_time, '%Y-%m-%dT%H:%i:%sZ') AS openTimestampUtc,
           formatDateTime(event_time, '%Y-%m-%dT%H:%i:%sZ') AS closeTimestampUtc,
           net_profit AS netProfit
         FROM aegis_analytics.fsm_trade_events
@@ -30,7 +31,7 @@ export async function GET() {
     const dailyGroups: Record<string, any> = {};
 
     for (const row of rows) {
-      const dateStr = row.closeTimestampUtc.split("T")[0];
+      const dateStr = (row.closeTimestampUtc || row.openTimestampUtc).split("T")[0];
       
       if (!dailyGroups[dateStr]) {
         dailyGroups[dateStr] = {

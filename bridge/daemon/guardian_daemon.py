@@ -54,7 +54,7 @@ class TickPayload(BaseModel):
     volume: float = 0.0
 
 class TradeEventPayload(BaseModel):
-    event_type: str = Field(..., regex="^(POSITION_OPENED|POSITION_CLOSED|CIRCUIT_BREAKER_TRIGGERED)$")
+    event_type: str = Field(..., pattern="^(POSITION_OPENED|POSITION_CLOSED|CIRCUIT_BREAKER_TRIGGERED)$")
     broker_time_msc: int
     account_number: int
     ticket: int

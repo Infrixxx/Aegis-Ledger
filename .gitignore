@@ -1,1 +1,18 @@
 node_modules
+
+# Local Datastores & SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Build artifacts & Next.js cache
+.next/
+next-env.d.ts
+
+# Python & Environment
+__pycache__/
+*.py[cod]
+venv/
+
+# Tooling
+repomix-output.xml

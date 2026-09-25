@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@aegis/protocol": "*",
+    "@clickhouse/client": "^1.23.1",
     "better-sqlite3": "^9.4.3",
     "drizzle-orm": "^0.30.1"
   },
