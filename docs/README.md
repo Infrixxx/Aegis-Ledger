@@ -169,3 +169,23 @@ The Next.js backend serves as the ingestion bridge for external trading terminal
   - [x] `GET` dynamic circuit status broadcast
 - [ ] **Phase 5: Containment Daemon & MQL5 Bridge**
 - [ ] **Phase 6: Frontend HUD & Pre-Flight UI**
+
+### Containment Daemon & Telemetry Bridge (`bridge/`)
+
+Physical execution boundaries are enforced via external OS-level scripts that communicate with the core API.
+
+- **`AccountGuardian.mq5`**: An MQL5 Expert Advisor attached to the MetaTrader 5 terminal. It hooks into `OnTradeTransaction`, tracking historical deal entries and exits to construct JSON payloads, which are pushed to the `POST /api/telemetry/trade-event` endpoint in real-time.
+- **`guardian_daemon.py`**: A Python script running in the background, polling the `GET /api/telemetry/circuit-status` endpoint every 5 seconds. If a circuit breaker lock is detected, it utilizes `psutil` to immediately terminate the `terminal64.exe` process, physically preventing further order execution.
+
+---
+
+### Implementation Progress
+
+- [x] **Phase 1: Shared Protocol Definition (`packages/protocol`)**
+- [x] **Phase 2: Persistence Layer & Database Schemas (`packages/db`)**
+- [x] **Phase 3: Core FSM Engine & Guard Enforcement (`packages/engine`)**
+- [x] **Phase 4: Telemetry Ingestion Endpoints (`apps/journal`)**
+- [x] **Phase 5: Containment Daemon & MQL5 Bridge (`bridge/`)**
+  - [x] Python OS-process containment daemon
+  - [x] MQL5 `OnTradeTransaction` HTTP telemetry bridge
+- [ ] **Phase 6: Frontend HUD & Pre-Flight UI**
