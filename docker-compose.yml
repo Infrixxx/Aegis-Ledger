@@ -37,7 +37,7 @@ services:
       - kafka
 
   minio:
-    image: docker.io/minio/minio:latest
+    image: docker.io/minio/minio:RELEASE.2024-03-30T09-41-56Z
     container_name: aegis_minio_lake
     ports:
       - "9000:9000"
