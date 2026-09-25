@@ -148,3 +148,24 @@ The FSM Engine executes state transitions, enforces invariant execution rules, a
 ```bash
 npm install
 npm --workspace=@aegis/engine run type-check
+
+### Telemetry Ingestion API (`apps/journal/app/api`)
+
+The Next.js backend serves as the ingestion bridge for external trading terminals.
+
+- **`POST /api/telemetry/trade-event`**: Ingests JSON payloads from the MQL5 Expert Advisor. Validates wire schemas via Zod and routes verified events (`POSITION_OPENED`, `POSITION_CLOSED`) into the core FSM Engine to trigger state mutations.
+- **`GET /api/telemetry/circuit-status`**: A lightweight, dynamically evaluated endpoint providing real-time system lockout state. Used by both the Next.js frontend HUD and the OS-level containment daemon to verify whether trading execution should be physically blocked.
+
+---
+
+### Implementation Progress
+
+- [x] **Phase 1: Shared Protocol Definition (`packages/protocol`)**
+- [x] **Phase 2: Persistence Layer & Database Schemas (`packages/db`)**
+- [x] **Phase 3: Core FSM Engine & Guard Enforcement (`packages/engine`)**
+- [x] **Phase 4: Telemetry Ingestion Endpoints (`apps/journal`)**
+  - [x] Scaffolding Next.js App Router workspace
+  - [x] `POST` payload parser and schema validator
+  - [x] `GET` dynamic circuit status broadcast
+- [ ] **Phase 5: Containment Daemon & MQL5 Bridge**
+- [ ] **Phase 6: Frontend HUD & Pre-Flight UI**
