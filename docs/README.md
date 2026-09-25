@@ -84,3 +84,67 @@ The application resides in exactly one of five operational states at any time:
 ```bash
 npm install
 npm --workspace=@aegis/protocol run type-check
+
+### Database & Persistence Layer (`packages/db`)
+
+Built on SQLite and Drizzle ORM, the persistence layer provides zero-configuration local storage with ACID compliance and write-ahead logging (WAL) enabled.
+
+- `system_state`: Singleton tracking current FSM state, active setup reference, active ticket, and UTC lockout release timestamp.
+- `setups`: Immutable pre-flight validation store capturing multi-timeframe checklist verifications, dialectical theses, and strict risk geometry.
+- `trades`: Execution telemetry mapping broker fills, realized PnL, R-multiples, and binary process compliance flags.
+- `audit_logs`: Immutable transition history tracking state changes, triggered events, and metadata payloads.
+
+---
+
+### Implementation Progress
+
+- [x] **Phase 1: Shared Protocol Definition (`packages/protocol`)**
+- [x] **Phase 2: Persistence Layer & Database Schemas (`packages/db`)**
+  - [x] SQLite embedded schema with Drizzle ORM
+  - [x] State, Setup, Trade, and Audit Log tables
+  - [x] WAL mode configuration for concurrent read/write safety
+- [ ] **Phase 3: Core FSM Engine & Guard Enforcement**
+- [ ] **Phase 4: Telemetry Ingestion Endpoints**
+- [ ] **Phase 5: Containment Daemon & MQL5 Bridge**
+- [ ] **Phase 6: Frontend HUD & Pre-Flight UI**
+
+---
+
+### Verification & Type-Check
+
+```bash
+npm install
+npm --workspace=@aegis/db run type-check
+
+### Core FSM Engine (`packages/engine`)
+
+The FSM Engine executes state transitions, enforces invariant execution rules, and maintains database transaction boundaries.
+
+- **Deterministic Transitions:** Enforces sequential paths ($0 \rightarrow 1 \rightarrow 2 \rightarrow 3 \rightarrow [0 \mid 4]$) and records atomic mutations to `system_state`.
+- **Pre-Flight Invalidation:** Prevents order execution until multi-timeframe checks, dialectical arguments, and minimum 1:2 R:R boundaries are satisfied.
+- **In-Flight Immutability:** Freezes pre-flight setups to read-only upon transition to `IN_PROGRESS`.
+- **Circuit Breaker Tripwire:** Flags trade outcomes yielding $R < 0$ and locks the platform to `LOCKED_CIRCUIT_BREAKER` until 00:00:00 UTC.
+- **Audit Logging:** Logs timestamped transition records and triggering events to `audit_logs`.
+
+---
+
+### Implementation Progress
+
+- [x] **Phase 1: Shared Protocol Definition (`packages/protocol`)**
+- [x] **Phase 2: Persistence Layer & Database Schemas (`packages/db`)**
+- [x] **Phase 3: Core FSM Engine & Guard Enforcement (`packages/engine`)**
+  - [x] Atomic state machine dispatcher with transaction rollback
+  - [x] Pre-flight immutability locking
+  - [x] Daily loss detection and UTC midnight lockout calculation
+  - [x] Immutable audit trail logging
+- [ ] **Phase 4: Telemetry Ingestion Endpoints**
+- [ ] **Phase 5: Containment Daemon & MQL5 Bridge**
+- [ ] **Phase 6: Frontend HUD & Pre-Flight UI**
+
+---
+
+### Verification & Type-Check
+
+```bash
+npm install
+npm --workspace=@aegis/engine run type-check
