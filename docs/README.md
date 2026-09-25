@@ -36,3 +36,51 @@ Trading_Journal/
 ```
 
 ---
+### Finite State Machine (FSM) Invariants
+
+The application resides in exactly one of five operational states at any time:
+
+1. `IDLE` (State 0): HUD and constraint status monitoring.
+2. `PRE_FLIGHT` (State 1): Multi-timeframe gatekeeper, dialectical analysis, and risk geometry validation.
+3. `IN_PROGRESS` (State 2): Active trade execution lock ("The Void") with immutable pre-flight parameters.
+4. `POST_MORTEM` (State 3): Post-trade audit, execution compliance grading, and trade finalization.
+5. `LOCKED_CIRCUIT_BREAKER` (State 4): Complete platform and broker containment locked until 00:00:00 UTC.
+
+#### State Transition Matrix
+
+| Source State | Target State | Trigger Condition |
+| :--- | :--- | :--- |
+| `IDLE` | `PRE_FLIGHT` | User initiates setup wizard |
+| `IDLE` | `LOCKED_CIRCUIT_BREAKER` | Active daily loss detected on startup |
+| `PRE_FLIGHT` | `IN_PROGRESS` | Pre-flight validation passed & order opened |
+| `PRE_FLIGHT` | `IDLE` | User aborts or selects `NO_TRADE_CHOP` |
+| `IN_PROGRESS` | `POST_MORTEM` | Broker position liquidation |
+| `POST_MORTEM` | `IDLE` | Trade finalized with positive or zero realized R |
+| `POST_MORTEM` | `LOCKED_CIRCUIT_BREAKER` | Trade finalized with `LOSS` or `realizedR < 0` |
+| `LOCKED_CIRCUIT_BREAKER` | `IDLE` | UTC midnight reset (00:00:00 UTC) |
+
+---
+
+### Implementation Progress
+
+- [x] **Phase 1: Shared Protocol Definition (`packages/protocol`)**
+  - [x] Domain entities and validation rules (Zod)
+  - [x] Deterministic FSM state machine transitions and guards
+  - [x] Ingestion wire schemas for MQL5 broker telemetry
+  - [x] Monorepo workspace configuration
+- [ ] **Phase 2: Persistence Layer & Database Schemas**
+  - [ ] Embedded SQLite setup
+  - [ ] Immutable audit logs, setups, and trades schema
+  - [ ] UTC-enforced lockout queries
+- [ ] **Phase 3: Core FSM Engine & Guard Enforcement**
+- [ ] **Phase 4: Telemetry Ingestion Endpoints**
+- [ ] **Phase 5: Containment Daemon & MQL5 Bridge**
+- [ ] **Phase 6: Frontend HUD & Pre-Flight UI**
+
+---
+
+### Verification & Type-Check
+
+```bash
+npm install
+npm --workspace=@aegis/protocol run type-check
