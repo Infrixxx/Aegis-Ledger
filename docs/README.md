@@ -134,3 +134,5 @@ Trading_Journal/
 - [x] **Phase 4: OLAP Warehouse:** ClickHouse database tracking all historical execution metrics.
 - [x] **Phase 5: Frontend BI:** Next.js App Router querying ClickHouse for daily ledger arrays.
 - [x] **Phase 6: Data Lake & ETL:** PySpark streaming application writing to MinIO.
+
+- [ ] WTC-33CLTERB
