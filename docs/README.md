@@ -189,3 +189,34 @@ Physical execution boundaries are enforced via external OS-level scripts that co
   - [x] Python OS-process containment daemon
   - [x] MQL5 `OnTradeTransaction` HTTP telemetry bridge
 - [ ] **Phase 6: Frontend HUD & Pre-Flight UI**
+
+### Frontend UI & HUD (`apps/journal`)
+
+The Next.js App Router serves as the master presentation layer, enforcing FSM constraints strictly via conditional UI rendering.
+
+- **`IDLE`**: Displays high-level compliance stats and the "Initiate" gatekeeper hook.
+- **`PRE_FLIGHT`**: The multi-timeframe wizard. Submitting this creates a pending setup in the database and waits for MQL5 MT5 telemetry to lock it.
+- **`IN_PROGRESS` ("The Void")**: Strips away all user inputs. Displays a read-only, locked view of the pre-flight risk parameters and a live holding timer.
+- **`POST_MORTEM`**: Appears automatically when MT5 sends a `POSITION_CLOSED` payload. Demands compliance grading and psychological debriefing before the platform can reset.
+- **`LOCKED_CIRCUIT_BREAKER`**: A dedicated red-screen lockdown view removing all trading UI, displaying a live countdown to `00:00:00 UTC`.
+
+---
+
+### Implementation Progress
+
+- [x] **Phase 1: Shared Protocol Definition (`packages/protocol`)**
+- [x] **Phase 2: Persistence Layer & Database Schemas (`packages/db`)**
+- [x] **Phase 3: Core FSM Engine & Guard Enforcement (`packages/engine`)**
+- [x] **Phase 4: Telemetry Ingestion Endpoints (`apps/journal/api`)**
+- [x] **Phase 5: Containment Daemon & MQL5 Bridge (`bridge/`)**
+- [x] **Phase 6: Frontend HUD & Pre-Flight UI (`apps/journal/page.tsx`)**
+  - [x] Tailwind CSS & Lucide configuration
+  - [x] Dynamic FSM state orchestrator component
+  - [x] API mutation wrappers for FSM events
+
+### System Completion & Handover
+
+Aegis Ledger is now fully architected. To launch the full stack locally:
+1. `npm run dev` (Starts Next.js backend/frontend).
+2. `python bridge/daemon/guardian_daemon.py` (Starts OS containment).
+3. Attach `AccountGuardian.mq5` to any MetaTrader 5 chart.
